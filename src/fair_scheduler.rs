@@ -1,20 +1,26 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
+#[derive(Debug)]
 pub struct Task {
     task_id: String,
     priority: f32,
-    user_id: String,
-    cycles_waiting_for: usize,
 }
 
 impl Task {
     pub fn new(task_id: String, user_id: String, priority: f32) -> Task {
         Task {
             task_id: task_id,
-            user_id: user_id,
             priority: priority,
-            cycles_waiting_for: 0
         }
+    }
+}
+
+impl PartialEq for Task {
+    fn eq(&self, other: &Task) -> bool {
+        if self.task_id == other.task_id && self.priority == self.priority {
+            return true;
+        }
+        return false;
     }
 }
 
@@ -23,57 +29,79 @@ impl Task {
 
 pub struct FairScheduler {
     system_capacity: usize,
-    task_queue: VecDeque<Task>,
-    user_to_cycles_since_last_served_map: HashMap<String, usize>
+    user_tasks_map: HashMap<String, VecDeque<Task>>,
 }
 
 impl FairScheduler {
     pub fn new(system_capacity: usize) -> FairScheduler {
         FairScheduler {
             system_capacity: system_capacity,
-            task_queue: VecDeque::new(),
-            user_to_cycles_since_last_served_map: HashMap::new()
+            user_tasks_map: HashMap::new(),
         }
     }
 
     pub fn run_cycle(&mut self, current_system_usage: usize) -> Vec<Task> {
         // While n-c != 0
-        // Fetch top n-c users from the user_to_cycles_since_last_served.
+        // Fetch top n-c users from the user_tasks_map
         //
-        // Go through the task queue, and pick one task for each user in the above fetch
-        // Remove this task from the task_queue
+        // Go through the user_tasks_map, and pick one task for each user with the highest cycles
+        // waiting for.
+        // Remove this task.
 
-        // Update the users_served list with new users from the queue, if any
-        for task in &self.task_queue {
-            if !self.user_to_cycles_since_last_served_map.contains_key(&task.user_id) {
-                self.user_to_cycles_since_last_served_map.insert(task.user_id.clone(), 0);
+        let mut tasks_to_send_count = self.system_capacity - current_system_usage;
+        let mut final_task_list: Vec<Task> = Vec::new();
+
+        let mut last_iteration_useful: bool = true;
+
+        while tasks_to_send_count > 0 && last_iteration_useful {
+            last_iteration_useful = false;
+            for (_, task_list) in self.user_tasks_map.iter_mut() {
+                if task_list.len() == 0 {
+                    continue;
+                }
+
+                final_task_list.push(task_list.pop_front().unwrap());
+                last_iteration_useful = true;
+
+                tasks_to_send_count -= 1;
+                if tasks_to_send_count == 0 {
+                    break;
+                }
             }
         }
 
-        let tasks_to_send_count = self.system_capacity - current_system_usage;
-        
-        let tasks_to_send: Vec<Task> = Vec::new();
-
-        let mut sorted_users = convert_map_into_vector_and_sort(&self.user_to_cycles_since_last_served_map);
-
-        while tasks_to_send_count != 0 {
-            for user in sorted_users.iter_mut() {
-            }
-        }
-
-        return tasks_to_send;
-
+        return final_task_list;
     }
 
-    pub fn add_task(&mut self, task: Task) {
-        self.task_queue.push_back(task);
+    pub fn add_task(&mut self, user_id: &String, task: Task) {
+        // A new task is always pushed to the end of the list.
+        // This means that tasks that have been waiting the longest will always be at the
+        // front.
+        if self.user_tasks_map.contains_key(user_id) {
+            let mut task_queue: &mut VecDeque<Task> = self.user_tasks_map.get_mut(user_id).unwrap();
+            task_queue.push_back(task);
+        }
+        else {
+            self.user_tasks_map.insert(user_id.clone(), VecDeque::from([task]));
+        }
     }
 }
 
-fn convert_map_into_vector_and_sort(map: &HashMap<String, usize>) -> Vec<(String, usize)> {
-    // Convert HashMap into a vector of (key, value) pairs
-    let mut vec: Vec<(String, usize)> = map.iter().map(|(k, v)| (k.clone(), *v)).collect();
-    // Sort by value (descending)
-    vec.sort_by_key(|k| std::cmp::Reverse(k.1));
-    vec
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_task() {
+        let mut fs: FairScheduler = FairScheduler::new(100);
+        let task = Task::new("1".to_string(), "user1".to_string(), 0.3);
+        fs.add_task(&"user1".to_string(), task);
+
+        let test_task = Task::new("1".to_string(), "user1".to_string(), 0.3);
+        let final_task_list = fs.run_cycle(0);
+        for t in final_task_list {
+            println!("Hmmm");
+            assert_eq!(test_task, t);
+        }
+    }
 }
