@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug)]
 pub struct Task {
@@ -7,7 +7,7 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(task_id: String, user_id: String, priority: f32) -> Task {
+    pub fn new(task_id: String, priority: f32) -> Task {
         Task {
             task_id: task_id,
             priority: priority,
@@ -43,13 +43,6 @@ impl FairScheduler {
     }
 
     pub fn run_cycle(&mut self, current_system_usage: usize) -> Vec<Task> {
-        // While n-c != 0
-        // Fetch top n-c users from the user_tasks_map
-        //
-        // Go through the user_tasks_map, and pick one task for each user with the highest cycles
-        // waiting for.
-        // Remove this task.
-
         let mut tasks_to_send_count = self.system_capacity - current_system_usage;
         let mut final_task_list: Vec<Task> = Vec::new();
 
@@ -81,7 +74,7 @@ impl FairScheduler {
         // This means that tasks that have been waiting the longest will always be at the
         // front.
         if self.user_tasks_map.contains_key(&user_id) {
-            let mut task_queue: &mut VecDeque<Task> = self.user_tasks_map.get_mut(&user_id).unwrap();
+            let task_queue: &mut VecDeque<Task> = self.user_tasks_map.get_mut(&user_id).unwrap();
             task_queue.push_back(task);
         }
         else {
@@ -90,22 +83,42 @@ impl FairScheduler {
         self.current_task_count += 1;
     }
 
-    pub fn get_current_task_count(&mut self) -> usize {
+    pub fn get_current_task_count(&self) -> usize {
         return self.current_task_count;
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+    use std::fmt::Display;
+    use std::hash::Hash;
+
     use super::*;
+
+    fn print_array<T: Debug>(v: &VecDeque<T>) {
+        for i in v.iter() {
+            print!("{:?}, ", i);
+        }
+        print!("\n");
+    }
+
+    fn print_map<K: Display+Eq+Hash, V: Debug>(map: &HashMap<K, VecDeque<V>>) {
+        for i in map.keys() {
+            print!("{}: ", i);
+            for j in map.get(i).iter() {
+                print_array(j);
+            }
+        }
+    }
 
     #[test]
     fn test_add_task() {
         let mut fs: FairScheduler = FairScheduler::new(100);
-        let task = Task::new("1".to_string(), "user1".to_string(), 0.3);
+        let task = Task::new("1".to_string(), 0.3);
         fs.add_task("user1".to_string(), task);
 
-        let test_task = Task::new("1".to_string(), "user1".to_string(), 0.3);
+        let test_task = Task::new("1".to_string(), 0.3);
         let final_task_list = fs.run_cycle(0);
         for t in final_task_list {
             assert_eq!(test_task, t);
@@ -113,34 +126,58 @@ mod tests {
     }
 
     #[test]
-    fn test_task_consumption() {
-        let mut fs: FairScheduler = FairScheduler::new(100);
+    fn test_all_users_equal() {
+        let N: usize = 25;
 
-        for i in 0..100 {
+        let mut fs: FairScheduler = FairScheduler::new(N);
+
+        for i in 0..N {
             let user_id = format!("user{}", i);
-            let task = Task::new(i.to_string(), user_id.clone(), 0.5);
+            let task = Task::new(i.to_string(), 0.5);
             fs.add_task(user_id, task);
         }
 
-        assert_eq!(fs.get_current_task_count(), 100);
+        assert_eq!(fs.get_current_task_count(), N);
 
-        let mut output_task_list = fs.run_cycle(40);
+        let mut output_task_list = fs.run_cycle(10);
 
-        assert_eq!(fs.get_current_task_count(), 40);
-        assert_eq!(output_task_list.len(), 60);
+        assert_eq!(fs.get_current_task_count(), 10);
+        assert_eq!(output_task_list.len(), 15);
 
-        for i in 100..200 {
-            let user_id = format!("user1");
-            let task = Task::new(i.to_string(), user_id.clone(), 0.5);
+        fs.run_cycle(5);
+
+    }
+
+    #[test]
+    fn test_one_user_heavy() {
+        let N: usize = 25;
+        let mut fs: FairScheduler = FairScheduler::new(N);
+
+        for i in 1..N {
+            let user_id = format!("user{}", i);
+            let task = Task::new(i.to_string(), 0.5);
             fs.add_task(user_id, task);
         }
 
-        output_task_list = fs.run_cycle(50);
-        assert_eq!(fs.get_current_task_count(), 90);
-        assert_eq!(output_task_list.len(), 50);
+        for i in 0..50 {
+            let user_id = format!("user0");
+            let task = Task::new(i.to_string(), 0.5);
+            fs.add_task(user_id, task);
+        }
 
-        output_task_list = fs.run_cycle(0);
-        assert_eq!(fs.get_current_task_count(), 0);
-        assert_eq!(output_task_list.len(), 90);
+        let temp_task = Task::new("10000".to_string(), 0.5);
+        fs.add_task("user2".to_string(), temp_task);
+
+        fs.run_cycle(0);
+
+        assert_eq!(fs.user_tasks_map.get("user0").unwrap().len(), 49);
+        assert_eq!(fs.user_tasks_map.get("user1").unwrap().len(), 0);
+        assert_eq!(fs.user_tasks_map.get("user2").unwrap().len(), 1);
+        assert_eq!(fs.user_tasks_map.get("user15").unwrap().len(), 0);
+
+        fs.run_cycle(0);
+        assert_eq!(fs.user_tasks_map.get("user0").unwrap().len(), 25);
+        assert_eq!(fs.user_tasks_map.get("user2").unwrap().len(), 0);
+        assert_eq!(fs.get_current_task_count(), 25);
     }
 }
