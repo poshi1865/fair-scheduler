@@ -64,16 +64,17 @@ impl FairScheduler {
         while tasks_to_send_count > 0 && last_iteration_useful {
             // Find out n-c users that have been waiting the longest. Then iterate through them and
             // get tasks
-            let users_waiting_longest: Vec<&User> = Vec::new();
-            for user in self.users.iter() {
+            let mut sorted_list: Vec<(&String, &mut User)> = Vec::new();
+            for (id, user) in self.users.iter_mut() {
+                sorted_list.push((id, user));
             }
+            sorted_list.sort_by(|a, b| b.1.cycles_waiting.cmp(&a.1.cycles_waiting));
 
             last_iteration_useful = false;
-            for (_, user) in self.users.iter_mut() {
+            for (_, user) in sorted_list.iter_mut() {
                 if user.task_list.len() == 0 {
                     continue;
                 }
-
                 final_task_list.push(user.task_list.pop_front().unwrap());
                 self.current_task_count -= 1;
                 last_iteration_useful = true;
