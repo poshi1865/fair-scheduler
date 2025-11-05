@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
 pub struct Task {
@@ -24,12 +24,25 @@ impl PartialEq for Task {
     }
 }
 
-// This is a stateful scheduler,
-// It internally maintains state of the global list of users
+struct User {
+    id: String,
+    cycles_waiting: usize,
+    task_list: VecDeque<Task>,
+}
+impl User {
+    pub fn new(id: String, cycles_waiting: usize, task_list: VecDeque<Task>) -> User {
+        User {
+            id: id,
+            cycles_waiting: cycles_waiting,
+            task_list: task_list
+        }
+    }
+}
+// The scheduler internally maintains state of the global list of users
 
 pub struct FairScheduler {
     system_capacity: usize,
-    user_tasks_map: HashMap<String, VecDeque<Task>>,
+    users: HashMap<String, User>,
     current_task_count: usize
 }
 
@@ -37,7 +50,7 @@ impl FairScheduler {
     pub fn new(system_capacity: usize) -> FairScheduler {
         FairScheduler {
             system_capacity: system_capacity,
-            user_tasks_map: HashMap::new(),
+            users: HashMap::new(),
             current_task_count: 0
         }
     }
@@ -49,13 +62,19 @@ impl FairScheduler {
         let mut last_iteration_useful: bool = true;
 
         while tasks_to_send_count > 0 && last_iteration_useful {
+            // Find out n-c users that have been waiting the longest. Then iterate through them and
+            // get tasks
+            let users_waiting_longest: Vec<&User> = Vec::new();
+            for user in self.users.iter() {
+            }
+
             last_iteration_useful = false;
-            for (_, task_list) in self.user_tasks_map.iter_mut() {
-                if task_list.len() == 0 {
+            for (_, user) in self.users.iter_mut() {
+                if user.task_list.len() == 0 {
                     continue;
                 }
 
-                final_task_list.push(task_list.pop_front().unwrap());
+                final_task_list.push(user.task_list.pop_front().unwrap());
                 self.current_task_count -= 1;
                 last_iteration_useful = true;
 
@@ -73,12 +92,12 @@ impl FairScheduler {
         // A new task is always pushed to the end of the list.
         // This means that tasks that have been waiting the longest will always be at the
         // front.
-        if self.user_tasks_map.contains_key(&user_id) {
-            let task_queue: &mut VecDeque<Task> = self.user_tasks_map.get_mut(&user_id).unwrap();
+        if self.users.contains_key(&user_id) {
+            let task_queue: &mut VecDeque<Task> = &mut self.users.get_mut(&user_id).unwrap().task_list;
             task_queue.push_back(task);
         }
         else {
-            self.user_tasks_map.insert(user_id.clone(), VecDeque::from([task]));
+            self.users.insert(user_id.clone(), User::new(user_id.clone(), 0, VecDeque::from([task])));
         }
         self.current_task_count += 1;
     }
@@ -170,14 +189,14 @@ mod tests {
 
         fs.run_cycle(0);
 
-        assert_eq!(fs.user_tasks_map.get("user0").unwrap().len(), 49);
-        assert_eq!(fs.user_tasks_map.get("user1").unwrap().len(), 0);
-        assert_eq!(fs.user_tasks_map.get("user2").unwrap().len(), 1);
-        assert_eq!(fs.user_tasks_map.get("user15").unwrap().len(), 0);
+        assert_eq!(fs.users.get("user0").unwrap().task_list.len(), 49);
+        assert_eq!(fs.users.get("user1").unwrap().task_list.len(), 0);
+        assert_eq!(fs.users.get("user2").unwrap().task_list.len(), 1);
+        assert_eq!(fs.users.get("user15").unwrap().task_list.len(), 0);
 
         fs.run_cycle(0);
-        assert_eq!(fs.user_tasks_map.get("user0").unwrap().len(), 25);
-        assert_eq!(fs.user_tasks_map.get("user2").unwrap().len(), 0);
+        assert_eq!(fs.users.get("user0").unwrap().task_list.len(), 25);
+        assert_eq!(fs.users.get("user2").unwrap().task_list.len(), 0);
         assert_eq!(fs.get_current_task_count(), 25);
     }
 }
