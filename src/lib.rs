@@ -85,6 +85,9 @@ impl FairScheduler {
                 if max_tasks_can_send == 0 && !all_users_served {
                     user.cycles_waiting += 1;
                 }
+                else if max_tasks_can_send == 0 && all_users_served {
+                    break;
+                }
                 else {
                     user.cycles_waiting = 0;
                     final_task_list.push(user.task_list.pop_front().unwrap());
