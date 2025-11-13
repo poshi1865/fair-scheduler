@@ -63,6 +63,9 @@ impl FairScheduler {
 
     pub fn run_cycle(&mut self, current_system_usage: usize) -> Vec<Task> {
         let mut max_tasks_can_send = self.system_capacity - current_system_usage;
+        if max_tasks_can_send == 0 {
+            return vec![];
+        }
         let mut final_task_list: Vec<Task> = Vec::new();
 
         // Find out n-c users that have been waiting the longest. Then iterate through them and
