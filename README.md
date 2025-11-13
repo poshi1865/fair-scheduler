@@ -9,17 +9,17 @@
 3. The tasks which have been waiting for more turns should be prioritized over the tasks which have been waiting for less turns, provided point 2.
 
 #### A few simulations:
-If we have equal capacity each cycle
-[<img src="images/eq_space_every_cycle.png">]
+- If we have equal capacity each cycle
+<img src="images/eq_space_every_cycle.png">
 
 #### _Start state_
-Number of users: 20
-System capacity: 10
-Total tasks to process: 292
-[<img src="images/no_eq_space_every_cycle_and_users_more_than_n.png">]
+- Number of users: 20
+- System capacity: 10
+- Total tasks to process: 292
+<img src="images/no_eq_space_every_cycle_and_users_more_than_n.png">
 
 #### _Start state_
-Number of users: 8
-System capacity: 5
-Total tasks to process: 55
-[<img src="images/3.png">]
+- Number of users: 8
+- System capacity: 5
+- Total tasks to process: 55
+<img src="images/3.png">
