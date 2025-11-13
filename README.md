@@ -8,7 +8,7 @@
 2. The users who haven't had any opportunity to get their tasks processed should be prioritized.
 3. The tasks per user should be served in a first come first serve manner.
 
-### A few simulations:
+### A few simulations (x axis is cycles, y axis is number of tasks):
 #### _If we have equal capacity each cycle_
 <img src="images/eq_space_every_cycle.png">
 
