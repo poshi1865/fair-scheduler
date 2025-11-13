@@ -6,7 +6,7 @@
 ### Guarantees:
 1. Each user gets an equal opportunity each cycle.
 2. The users who haven't had any opportunity to get their tasks processed should be prioritized.
-3. The tasks which have been waiting for more turns should be prioritized over the tasks which have been waiting for less turns, provided point 2.
+3. The tasks per user should be served in a first come first serve manner.
 
 ### A few simulations:
 #### _If we have equal capacity each cycle_
